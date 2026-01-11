@@ -20,6 +20,25 @@ def create_table() -> str:
 
 
 def insert_data(conn: ddb.DuckDBPyConnection, data: list[TObject]) -> int:
+    """
+    Legacy method - converts list of TObject to Arrow then inserts.
+    Consider using insert_arrow_data() for better performance.
+    """
     table = pa.Table.from_pylist([asdict(d) for d in data])
     conn.from_arrow(table).create("t_object")
+    return 0
+
+
+def insert_arrow_data(conn: ddb.DuckDBPyConnection, arrow_table: pa.Table) -> int:
+    """
+    Insert Arrow table directly to DuckDB without conversion.
+    
+    Args:
+        conn: DuckDB connection
+        arrow_table: Arrow table with t_object data
+        
+    Returns:
+        0 on success
+    """
+    conn.from_arrow(arrow_table).create("t_object")
     return 0

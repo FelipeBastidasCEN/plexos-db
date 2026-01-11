@@ -4,6 +4,7 @@ from xml.etree import ElementTree as ET
 from array import array
 from pathlib import Path
 from zipfile import ZipFile
+import pyarrow as pa
 
 from plexos_db.model.plexos.t_object import TObject
 
@@ -39,7 +40,23 @@ class ApiPlexos:
         return cls(xml=xml_root, bin=arr)
 
     def t_object(self) -> list[TObject]:
+        """
+        Legacy method - returns list of TObject dataclasses.
+        Consider using t_object_arrow() for better performance.
+        """
         search_path: str = ".//{*}t_object"
         elements: list[ET.Element] = self.xml.findall(search_path)
         assert len(elements) >= 1, "ERRPR: no t_object table in XML."
         return [TObject.from_element(elem) for elem in elements]
+
+    def t_object_arrow(self, chunk_size: int = 1000) -> pa.Table:
+        """
+        Parse t_object table to Arrow table using streaming approach.
+
+        Args:
+            chunk_size: Number of rows per chunk for memory management
+
+        Returns:
+            Arrow table with parsed t_object data
+        """
+        return TObject.parse_to_arrow(self.xml, chunk_size)

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 import duckdb
+import pyarrow as pa
 
 from plexos_db.model.ddb import t_object
 
@@ -31,4 +32,17 @@ class ApiDuckDB:
         return 0
 
     def t_object(self, data: list[t_object.TObject]) -> None:
+        """
+        Legacy method - converts list of TObject to Arrow then inserts.
+        Consider using t_object_arrow() for better performance.
+        """
         t_object.insert_data(self.conn, data)
+
+    def t_object_arrow(self, arrow_table: pa.Table) -> None:
+        """
+        Insert Arrow table directly to DuckDB without conversion.
+
+        Args:
+            arrow_table: Arrow table with t_object data
+        """
+        t_object.insert_arrow_data(self.conn, arrow_table)
