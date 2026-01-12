@@ -69,8 +69,6 @@ class DuckDBSchemaManager:
         Returns:
             String SQL con definición de columnas
         """
-        from ..schemas.t_object_schema import T_OBJECT_SPEC
-        from ..schemas.t_property_schema import T_PROPERTY_SPEC
         
         # Mapeo de columnas a tipos DuckDB basado en converters
         column_types = self._get_column_types(spec)

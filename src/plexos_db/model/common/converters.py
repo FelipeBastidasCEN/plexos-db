@@ -1,10 +1,9 @@
 """Type converters para datos PLEXOS.
 
-Converters optimizados para performance extraídos de streaming_version.py.
-Manejan valores nulos y conversiones seguras para tipos comunes.
+Converters optimizados para performance y manejo de valores nulos.
+Diseñados para 100MB XML con validation robusta.
 """
 
-from typing import Any
 
 
 def to_int0(value: str | None) -> int:

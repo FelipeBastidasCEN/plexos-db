@@ -33,8 +33,8 @@ class ImportService:
         self,
         zip_path: Path,
         db_path: Path,
-        xml_name: str = "SolutionDataset.xml",
-        chunk_size: int = 10_000,
+        xml_name: str = "Model PRGdia_Full_Definitivo Solution.xml",
+        chunk_size: int = 100,
         overwrite: bool = True,
     ) -> dict:
         """

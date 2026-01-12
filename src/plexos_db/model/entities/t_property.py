@@ -1,6 +1,6 @@
 """TProperty entity - Dataclass puro para PLEXOS.
 
-Entity para tabla t_property basado en streaming_version.py.
+Entity para tabla t_property con validación de tipos.
 Solo definición de datos sin lógica de procesamiento.
 """
 

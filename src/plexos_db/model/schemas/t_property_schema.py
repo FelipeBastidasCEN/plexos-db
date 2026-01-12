@@ -1,6 +1,6 @@
 """TableSpec para t_property.
 
-Especificación de procesamiento para tabla t_property basada en streaming_version.py.
+Especificación de procesamiento optimizada para tabla t_property.
 """
 
 from .base import TableSpec

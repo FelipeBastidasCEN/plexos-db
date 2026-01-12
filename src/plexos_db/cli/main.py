@@ -15,7 +15,7 @@ from ..model.common.exceptions import PLEXOSDBError
 def create_parser() -> argparse.ArgumentParser:
     """
     Crea parser principal con todos los comandos y argumentos.
-    
+
     Returns:
         ArgumentParser configurado
     """
@@ -29,39 +29,36 @@ Ejemplos:
   plexos-db import --input solution.zip --output data.duckdb --chunk-size 20000
   plexos-db list-tables
   plexos-db validate --input solution.zip
-        """
+        """,
     )
-    
+
     # Subcomandos
     subparsers = parser.add_subparsers(
         dest="command",
         help="Comandos disponibles",
         required=True,
-        metavar="{import,list-tables,validate}"
+        metavar="{import,list-tables,validate}",
     )
-    
+
     # Import command
     _create_import_parser(subparsers)
-    
+
     # List tables command
     _create_list_tables_parser(subparsers)
-    
+
     # Validate command
     _create_validate_parser(subparsers)
-    
+
     # Global options
+    parser.add_argument("--version", action="version", version="plexos-db 0.2.0")
+
     parser.add_argument(
-        "--version",
-        action="version",
-        version="plexos-db 0.2.0"
-    )
-    
-    parser.add_argument(
-        "--verbose", "-v",
+        "--verbose",
+        "-v",
         action="store_true",
-        help="Mostrar información detallada del procesamiento"
+        help="Mostrar información detallada del procesamiento",
     )
-    
+
     return parser
 
 
@@ -70,47 +67,45 @@ def _create_import_parser(subparsers) -> None:
     import_parser = subparsers.add_parser(
         "import",
         help="Importar datos PLEXOS desde ZIP a DuckDB",
-        description="Importa datos desde un archivo ZIP de PLEXOS y crea base de datos DuckDB optimizada."
+        description="Importa datos desde un archivo ZIP de PLEXOS y crea base de datos DuckDB optimizada.",
     )
-    
+
     import_parser.add_argument(
-        "--input", "-i",
+        "--input",
+        "-i",
         type=Path,
         required=True,
-        help="Ruta al archivo ZIP de PLEXOS (requerido)"
+        help="Ruta al archivo ZIP de PLEXOS (requerido)",
     )
-    
+
     import_parser.add_argument(
-        "--output", "-o",
+        "--output",
+        "-o",
         type=Path,
         required=True,
-        help="Ruta a la base de datos DuckDB de salida (requerido)"
+        help="Ruta a la base de datos DuckDB de salida (requerido)",
     )
-    
+
     import_parser.add_argument(
         "--xml-name",
         type=str,
-        default="SolutionDataset.xml",
-        help="Nombre del archivo XML dentro del ZIP (default: SolutionDataset.xml)"
+        default="Model PRGdia_Full_Definitivo Solution.xml",
+        help="Nombre del archivo XML dentro del ZIP (default: SolutionDataset.xml)",
     )
-    
+
     import_parser.add_argument(
         "--chunk-size",
         type=int,
         default=10000,
-        help="Tamaño de chunks para procesamiento (default: 10000)"
+        help="Tamaño de chunks para procesamiento (default: 10000)",
     )
-    
+
     import_parser.add_argument(
-        "--overwrite",
-        action="store_true",
-        help="Sobreescribir base de datos existente"
+        "--overwrite", action="store_true", help="Sobreescribir base de datos existente"
     )
-    
+
     import_parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Validar archivos sin procesar datos"
+        "--dry-run", action="store_true", help="Validar archivos sin procesar datos"
     )
 
 
@@ -119,14 +114,14 @@ def _create_list_tables_parser(subparsers) -> None:
     list_parser = subparsers.add_parser(
         "list-tables",
         help="Listar tablas PLEXOS soportadas",
-        description="Muestra todas las tablas PLEXOS que el sistema puede procesar."
+        description="Muestra todas las tablas PLEXOS que el sistema puede procesar.",
     )
-    
+
     list_parser.add_argument(
         "--format",
         choices=["table", "json", "csv"],
         default="table",
-        help="Formato de salida (default: table)"
+        help="Formato de salida (default: table)",
     )
 
 
@@ -135,41 +130,42 @@ def _create_validate_parser(subparsers) -> None:
     validate_parser = subparsers.add_parser(
         "validate",
         help="Validar archivo ZIP PLEXOS",
-        description="Valida que un archivo ZIP PLEXOS tenga la estructura correcta sin procesar datos."
+        description="Valida que un archivo ZIP PLEXOS tenga la estructura correcta sin procesar datos.",
     )
-    
+
     validate_parser.add_argument(
-        "--input", "-i",
+        "--input",
+        "-i",
         type=Path,
         required=True,
-        help="Ruta al archivo ZIP de PLEXOS a validar"
+        help="Ruta al archivo ZIP de PLEXOS a validar",
     )
-    
+
     validate_parser.add_argument(
         "--xml-name",
         type=str,
         default="SolutionDataset.xml",
-        help="Nombre del archivo XML a validar (default: SolutionDataset.xml)"
+        help="Nombre del archivo XML a validar (default: SolutionDataset.xml)",
     )
 
 
 def main(argv: Optional[List[str]] = None) -> int:
     """
     Entry point principal de CLI.
-    
+
     Args:
         argv: Argumentos de línea de comandos (usa sys.argv si es None)
-        
+
     Returns:
         Exit code (0 = éxito, 1 = error)
     """
     if argv is None:
         argv = sys.argv[1:]
-    
+
     try:
         parser = create_parser()
         args = parser.parse_args(argv)
-        
+
         # Ejecutar comando correspondiente
         if args.command == "import":
             cmd = ImportCommand(args)
@@ -182,7 +178,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             return cmd.execute()
         else:
             parser.error(f"Comando desconocido: {args.command}")
-            
+
     except KeyboardInterrupt:
         print("\nOperación cancelada por el usuario.")
         return 130
@@ -193,6 +189,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"Error inesperado: {e}")
         if "--verbose" in (argv or []):
             import traceback
+
             traceback.print_exc()
         return 1
 

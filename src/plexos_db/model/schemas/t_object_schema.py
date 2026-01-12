@@ -1,30 +1,30 @@
 """TableSpec para t_object.
 
-Especificación de procesamiento para tabla t_object basada en streaming_version.py.
+Especificación de procesamiento optimizada para tabla t_object.
 """
 
 from .base import TableSpec
-from ..common.converters import to_int0, to_str, clean_uuid
 
 
 T_OBJECT_SPEC = TableSpec(
     row_tag="t_object",
     columns=(
-        "class_id", 
-        "name", 
-        "category_id", 
-        "index", 
-        "object_id", 
-        "show", 
-        "guid"
+        "class_id",
+        "name",
+        "category_id",
+        "index",
+        "object_id",
+        "show",
+        "GUID",
     ),
     converters={
-        "class_id": to_int0,
-        "name": to_str,
-        "category_id": to_int0,
-        "index": to_int0,
-        "object_id": to_int0,
-        "show": lambda s: (s or "").strip().lower() in {"true", "1", "yes", "y", "t"},
-        "guid": clean_uuid,  # None si está vacío
-    }
+        "class_id": int,
+        "name": str,
+        "category_id": int,
+        "index": int,
+        "object_id": int,
+        "show": lambda s: (s or "").strip().lower()
+        in {"true", "true", "1", "yes", "y", "t"},
+        "GUID": str,  # None si está vacío
+    },
 )
