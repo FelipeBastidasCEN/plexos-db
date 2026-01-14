@@ -90,7 +90,7 @@ def _create_import_parser(subparsers) -> None:
         "--xml-name",
         type=str,
         default="Model PRGdia_Full_Definitivo Solution.xml",
-        help="Nombre del archivo XML dentro del ZIP (default: SolutionDataset.xml)",
+        help="Nombre del archivo XML dentro del ZIP (default: Model PRGdia_Full_Definitivo Solution.xml)",
     )
 
     import_parser.add_argument(
