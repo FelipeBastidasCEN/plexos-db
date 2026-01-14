@@ -62,11 +62,6 @@ class ImportCommand(BaseCommand):
             self._print(f"XML: {self.args.xml_name}")
             self._print(f"Chunk size: {self.args.chunk_size}")
 
-            # Validar dry run
-            if self.args.dry_run:
-                self._print("MODO DRY RUN - Solo validación")
-                return self._validate_only()
-
             # Crear servicio de importación
             import_service = ImportService()
 
@@ -94,20 +89,6 @@ class ImportCommand(BaseCommand):
                 import traceback
 
                 traceback.print_exc()
-            return 1
-
-    def _validate_only(self) -> int:
-        """Valida archivos sin procesar (dry run)."""
-        try:
-            FileValidator.validate_zip_path(self.args.input)
-            FileValidator.validate_db_path(self.args.output)
-            FileValidator.validate_xml_name(self.args.xml_name)
-
-            self._print_success("Validación exitosa - archivos listos")
-            return 0
-
-        except PLEXOSDBError as e:
-            self._print_error(f"Error de validación: {e}")
             return 1
 
     def _show_import_results(self, result: Dict[str, Any]) -> None:

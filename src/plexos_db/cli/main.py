@@ -104,10 +104,6 @@ def _create_import_parser(subparsers) -> None:
         "--overwrite", action="store_true", help="Sobreescribir base de datos existente"
     )
 
-    import_parser.add_argument(
-        "--dry-run", action="store_true", help="Validar archivos sin procesar datos"
-    )
-
 
 def _create_list_tables_parser(subparsers) -> None:
     """Crea parser para comando list-tables."""
