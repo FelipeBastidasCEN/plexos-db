@@ -11,6 +11,7 @@ from ..business.services.import_service import ImportService
 from ..business.processors.validators import FileValidator
 from ..model.schemas.schema_registry import SchemaRegistry
 from ..model.common.exceptions import PLEXOSDBError
+from ..common.logging_config import get_logger
 
 
 class BaseCommand:
@@ -25,6 +26,7 @@ class BaseCommand:
         """
         self.args = args
         self.verbose = getattr(args, "verbose", False)
+        self.logger = get_logger("cli")
 
     def _print(self, message: str, force: bool = False) -> None:
         """
@@ -35,15 +37,18 @@ class BaseCommand:
             force: Si fuerza impresión independientemente de verbose
         """
         if self.verbose or force:
+            self.logger.info(message)
             print(message)
 
     def _print_error(self, message: str) -> None:
         """Imprime mensaje de error."""
-        print(f"ERROR: {message}", file=sys.stderr)
+        self.logger.error(f"ERROR: {message}")
+        # print(f"ERROR: {message}", file=sys.stderr)
 
     def _print_success(self, message: str) -> None:
         """Imprime mensaje de éxito."""
-        print(f"✅ {message}")
+        self.logger.info(f"✅ {message}")
+        # print(f"✅ {message}")
 
 
 class ImportCommand(BaseCommand):
@@ -57,15 +62,20 @@ class ImportCommand(BaseCommand):
             Exit code (0 = éxito, 1 = error)
         """
         try:
+            self.logger.info(f"Iniciando importación desde {self.args.input}")
             self._print(f"Iniciando importación desde {self.args.input}")
             self._print(f"Salida: {self.args.output}")
             self._print(f"XML: {self.args.xml_name}")
             self._print(f"Chunk size: {self.args.chunk_size}")
 
             # Crear servicio de importación
+            self.logger.debug("Creando servicio de importación")
             import_service = ImportService()
 
             # Ejecutar importación
+            self.logger.info(
+                f"Ejecutando importación con chunk_size={self.args.chunk_size}"
+            )
             result = import_service.import_plexos_data(
                 zip_path=self.args.input,
                 db_path=self.args.output,
@@ -77,11 +87,10 @@ class ImportCommand(BaseCommand):
             # Mostrar resultados
             self._show_import_results(result)
             self._print_success("Importación completada exitosamente")
-
             return 0
 
         except PLEXOSDBError as e:
-            self._print_error(f"Error PLEXOS-DB: {e}")
+            self._print_error(str(e))
             return 1
         except Exception as e:
             self._print_error(f"Error inesperado: {e}")
@@ -96,6 +105,7 @@ class ImportCommand(BaseCommand):
         import_stats = result.get("import_stats", {})
         bulk_stats = result.get("bulk_stats", {})
 
+        self.logger.info("Mostrando estadísticas de importación")
         self._print("\n📊 Estadísticas de Importación:")
         self._print(f"  Total filas procesadas: {import_stats.get('total_rows', 0)}")
 
@@ -104,6 +114,7 @@ class ImportCommand(BaseCommand):
             self._print("  Filas por tabla:")
             for table, count in rows_by_table.items():
                 self._print(f"    {table}: {count}")
+                self.logger.debug(f"Tabla {table}: {count} filas")
 
         if bulk_stats:
             self._print("  Estadísticas bulk:")
@@ -122,9 +133,11 @@ class ListTablesCommand(BaseCommand):
             Exit code (0 = éxito, 1 = error)
         """
         try:
+            self.logger.info("Listando tablas soportadas")
             schema_registry = SchemaRegistry()
             tables = schema_registry.get_all_table_names()
 
+            self.logger.debug(f"Formato de salida: {self.args.format}")
             if self.args.format == "table":
                 self._show_table_format(tables)
             elif self.args.format == "json":
@@ -136,7 +149,7 @@ class ListTablesCommand(BaseCommand):
             return 0
 
         except PLEXOSDBError as e:
-            self._print_error(f"Error PLEXOS-DB: {e}")
+            self._print_error(str(e))
             return 1
         except Exception as e:
             self._print_error(f"Error inesperado: {e}")
@@ -148,6 +161,7 @@ class ListTablesCommand(BaseCommand):
 
     def _show_table_format(self, tables: list[str]) -> None:
         """Muestra tablas en formato tabla."""
+        self.logger.info("Mostrando tablas en formato tabla")
         self._print("Tablas PLEXOS soportadas:")
         self._print("=" * 40)
         for table in tables:
@@ -156,11 +170,13 @@ class ListTablesCommand(BaseCommand):
 
     def _show_json_format(self, tables: list[str]) -> None:
         """Muestra tablas en formato JSON."""
+        self.logger.info("Mostrando tablas en formato JSON")
         data = {"supported_tables": tables, "count": len(tables)}
         print(json.dumps(data, indent=2))
 
     def _show_csv_format(self, tables: list[str]) -> None:
         """Muestra tablas en formato CSV."""
+        self.logger.info("Mostrando tablas en formato CSV")
         print("table_name")
         for table in tables:
             print(table)
@@ -177,10 +193,12 @@ class ValidateCommand(BaseCommand):
             Exit code (0 = éxito, 1 = error)
         """
         try:
+            self.logger.info(f"Validando archivo: {self.args.input}")
             self._print(f"Validando archivo: {self.args.input}")
             self._print(f"XML objetivo: {self.args.xml_name}")
 
             # Validar archivo ZIP
+            self.logger.debug("Validando ruta ZIP y nombre XML")
             FileValidator.validate_zip_path(self.args.input)
             FileValidator.validate_xml_name(self.args.xml_name)
 
@@ -188,6 +206,7 @@ class ValidateCommand(BaseCommand):
             from zipfile import ZipFile
             from xml.etree.ElementTree import iterparse
 
+            self.logger.debug("Analizando estructura del ZIP")
             with ZipFile(self.args.input) as zf:
                 file_list = zf.namelist()
                 if self.args.xml_name not in file_list:
@@ -199,40 +218,42 @@ class ValidateCommand(BaseCommand):
                 self._print(f"Archivos en ZIP: {len(file_list)}")
                 self._print(f"XML encontrado: {self.args.xml_name}")
 
-                # Validar estructura básica del XML
-                with zf.open(self.args.xml_name, "r") as f:
-                    elem_count = 0
-                    table_tags = set()
+                # Analizar estructura XML básica
+                elem_count = 0
+                table_tags = set()
 
-                    for _, elem in iterparse(f, events=("end",)):
-                        elem_count += 1
-                        tag = elem.tag.split("}", 1)[-1]  # Remover namespace
-                        table_tags.add(tag)
-                        elem.clear()
-
-                        if elem_count % 10000 == 0:
-                            self._print(f"  Procesados: {elem_count} elementos")
+                try:
+                    with zf.open(self.args.xml_name, "r") as f:
+                        for _, elem in iterparse(f, events=("end",)):
+                            elem_count += 1
+                            tag = elem.tag.split("}", 1)[-1]  # Remover namespace
+                            if tag.startswith("t_"):
+                                table_tags.add(tag)
+                            elem.clear()
 
                     self._print(f"Total elementos XML: {elem_count}")
                     self._print(f"Tablas encontradas: {len(table_tags)}")
 
+                    # Validar contra tablas conocidas
                     schema_registry = SchemaRegistry()
-                    supported = schema_registry.get_all_table_names()
-                    unknown = [t for t in table_tags if t not in supported]
+                    known_tables = set(schema_registry.get_all_table_names())
+                    unknown_tables = table_tags - known_tables
 
-                    if unknown:
-                        self._print(f"⚠️  Tablas desconocidas: {unknown}")
-                        self._print(
-                            f"✅ Tablas soportadas: {[t for t in table_tags if t in supported]}"
-                        )
+                    if unknown_tables:
+                        self._print(f"⚠️  Tablas desconocidas: {unknown_tables}")
+                        self._print("Considera agregar estas tablas al SchemaRegistry")
                     else:
-                        self._print_success("Todas las tablas son soportadas")
+                        self._print_success("Estructura XML válida")
+                        self._print("Todas las tablas son reconocidas")
 
-            self._print_success("Validación completada exitosamente")
+                except Exception as e:
+                    self._print_error(f"Error al analizar XML: {e}")
+                    return 1
+
             return 0
 
         except PLEXOSDBError as e:
-            self._print_error(f"Error PLEXOS-DB: {e}")
+            self._print_error(str(e))
             return 1
         except Exception as e:
             self._print_error(f"Error inesperado: {e}")

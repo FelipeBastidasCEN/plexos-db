@@ -6,35 +6,27 @@ Clases base para definir y procesar especificaciones de tablas PLEXOS.
 from dataclasses import dataclass, field
 from typing import Callable, Mapping, Sequence, Any
 
+from ...common.logging_config import get_logger
+
 
 @dataclass(frozen=True, slots=True)
 class TableSpec:
-    """
-    Especificación de tabla para procesamiento de datos PLEXOS.
+    """Especificación de tabla PLEXOS con metadata y conversión."""
 
-    Define cómo procesar una tabla específica del XML: columnas,
-    converters para tipos de datos, y comportamiento de procesamiento.
-    """
+    row_tag: str
+    columns: Sequence[str] = field(default_factory=list)
+    converters: Mapping[str, Callable[[str | None], Any]] = field(default_factory=dict)
+    table_name: str = field(init=False)
+    _logger: Any = field(init=False, default=None)
 
-    row_tag: str  # Tag XML que identifica esta tabla
-    columns: Sequence[str]  # Orden de columnas para tuplas
-    converters: Mapping[str, Callable[[str | None], Any]]  # Converters por columna
-    table_name: str = field(init=False)  # Calculado desde row_tag
-
-    def __post_init__(self) -> None:
-        """Validación de la especificación."""
-        if not self.row_tag:
-            raise ValueError("row_tag no puede ser vacío")
-        if not self.columns:
-            raise ValueError("columns no puede estar vacío")
-        if not self.converters:
-            raise ValueError("converters no puede estar vacío")
-
-        # Calcular table_name (quitar prefijo 't_' si existe)
+    def __post_init__(self):
+        """Inicializa valores derivados."""
+        # Derivar table_name de row_tag
         table_name = self.row_tag
         if table_name.startswith("t_"):
             table_name = table_name[2:]
         object.__setattr__(self, "table_name", table_name)
+        object.__setattr__(self, "_logger", get_logger("model.schemas"))
 
     def get_converter(self, column: str) -> Callable[[str | None], Any]:
         """
@@ -97,9 +89,9 @@ class TableSpec:
         Returns:
             Tupla con datos convertidos en orden de columns
         """
-        # elf.validate_row_data(row_data)
-        print(row_data)
-
+        logger = get_logger("model.schemas")
+        logger.debug(f"Convirtiendo {len(row_data)} campos para tabla {self.table_name}")
+        
         result = []
         for col in self.columns:
             raw = row_data.get(col)

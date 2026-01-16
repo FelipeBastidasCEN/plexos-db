@@ -12,6 +12,7 @@ from xml.etree.ElementTree import iterparse
 from ...model.common.xml_utils import strip_namespace, extract_children_text
 from ...model.schemas.schema_registry import SchemaRegistry
 from ...model.common.exceptions import MissingColumnError
+from ...common.logging_config import get_logger
 
 
 class XMLProcessor:
@@ -26,6 +27,7 @@ class XMLProcessor:
         """
         self.schema_registry = schema_registry
         self._stats = ProcessingStats()
+        self.logger = get_logger("business.processors")
 
     def stream_from_zip(
         self, zip_path: Path, xml_name: str
@@ -40,6 +42,7 @@ class XMLProcessor:
         Yields:
             Tuplas de (table_name, row_tuple)
         """
+        self.logger.info(f"Iniciando streaming de ZIP: {zip_path.name}, XML: {xml_name}")
         specs = self.schema_registry.get_all_specs()
 
         with ZipFile(zip_path) as zf:
@@ -47,30 +50,31 @@ class XMLProcessor:
                 for _, elem in iterparse(f, events=("end",)):
                     tag = strip_namespace(elem.tag)
 
-                    # Comportamiento 1: Ignorar tablas desconocidas silenciosamente
+                    # Comportamiento 1: Ignorar tablas desconocidas con warning
                     if tag not in specs:
-                        # FUTURO: logger.warning(f"Ignorando tabla desconocida: {tag}")
-                        # elem.clear()
+                        self.logger.warning(f"Ignorando tabla desconocida: {tag}")
                         continue
 
                     spec = specs[tag]
+                    self.logger.debug(f"Procesando elemento: {tag}")
 
                     try:
                         # Extracción ultra-rápida de datos
                         row_data = extract_children_text(elem)
+                        self.logger.debug(f"Extraídos {len(row_data)} campos para {tag}")
 
                         # Validación de columnas requeridas
                         # spec.validate_row_data(row_data)
 
                         # Conversión a tupla usando TableSpec
                         row_tuple = spec.convert_row(row_data)
-                        print(row_tuple)
 
                         yield tag, row_tuple
                         self._stats.processed_row(tag)
 
                     except MissingColumnError as e:
                         # Comportamiento 2: Error en columnas faltantes no opcionales
+                        self.logger.error(f"Error en {tag}: {e}")
                         raise ValueError(f"Error en {tag}: {e}")
 
                     # Memory management crítico para archivos grandes

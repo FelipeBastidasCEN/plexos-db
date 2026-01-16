@@ -10,6 +10,7 @@ from typing import List, Optional
 
 from .commands import ImportCommand, ListTablesCommand, ValidateCommand
 from ..model.common.exceptions import PLEXOSDBError
+from ..common.logging_config import setup_logging, get_logger
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -161,6 +162,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     try:
         parser = create_parser()
         args = parser.parse_args(argv)
+        
+        # Configurar logging basado en argumentos
+        log_level = "DEBUG" if args.verbose else "INFO"
+        logger = setup_logging(log_level=log_level)
+        logger.info(f"Iniciando PLEXOS-DB con comando: {args.command}")
 
         # Ejecutar comando correspondiente
         if args.command == "import":
@@ -176,14 +182,23 @@ def main(argv: Optional[List[str]] = None) -> int:
             parser.error(f"Comando desconocido: {args.command}")
 
     except KeyboardInterrupt:
+        logger = get_logger("cli")
+        logger.info("Operación cancelada por el usuario")
         print("\nOperación cancelada por el usuario.")
         return 130
     except PLEXOSDBError as e:
+        logger = get_logger("cli")
+        logger.error(f"Error PLEXOS-DB: {e}")
         print(f"Error PLEXOS-DB: {e}")
         return 1
     except Exception as e:
+        logger = get_logger("cli")
+        logger.error(f"Error inesperado: {e}")
+        verbose = "--verbose" in (argv or [])
+        if verbose:
+            logger.exception("Detalles del error:")
         print(f"Error inesperado: {e}")
-        if "--verbose" in (argv or []):
+        if verbose:
             import traceback
 
             traceback.print_exc()

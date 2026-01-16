@@ -29,7 +29,14 @@ class ConfigService:
         },
         "logging": {
             "level": "INFO",
-            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            "console": True,
+            "file": True,
+            "sqlite": True,
+            "file_max_size_mb": 10,
+            "file_backup_count": 5,
+            "sqlite_min_level": "WARNING",
+            "sqlite_path": "plexos_logs.db",
+            "log_dir": "logs"
         }
     }
     
@@ -58,13 +65,13 @@ class ConfigService:
         try:
             # Placeholder para carga de archivos de configuración futuros
             # Por ahora solo se valida que el archivo exista
-            if self.config_path.suffix.lower() in ['.yaml', '.yml']:
+            if self.config_path and self.config_path.suffix.lower() in ['.yaml', '.yml']:
                 # FUTURO: Implementar carga YAML
                 pass
-            elif self.config_path.suffix.lower() == '.json':
+            elif self.config_path and self.config_path.suffix.lower() == '.json':
                 # FUTURO: Implementar carga JSON
                 pass
-            else:
+            elif self.config_path:
                 raise ConfigurationError(f"Formato de configuración no soportado: {self.config_path}")
                 
         except Exception as e:
