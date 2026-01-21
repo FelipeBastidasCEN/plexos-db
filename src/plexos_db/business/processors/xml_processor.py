@@ -5,7 +5,7 @@ Arquitectura optimizada para 100MB XML.
 """
 
 from pathlib import Path
-from typing import Iterator, Tuple, Union
+from typing import Iterator, Tuple
 from xml.etree.ElementTree import iterparse
 from zipfile import ZipFile
 
