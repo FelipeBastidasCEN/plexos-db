@@ -5,7 +5,8 @@ Preparado para configuración YAML futura.
 """
 
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
 from ...model.common.exceptions import ConfigurationError
 
 
