@@ -9,6 +9,7 @@ from typing import Optional
 
 from ...model.common.exceptions import ConfigurationError, DatabaseError
 from ...model.entities.entity_registry import EntityRegistry
+from ...model.entities.table_register import TableRegister
 from ...model.storage.bulk_loader import DuckDBBulkLoader
 from ...model.storage.connection import DuckDBConnection
 from ...model.storage.schema_manager import DuckDBSchemaManager
@@ -19,7 +20,11 @@ from ..processors.xml_processor import XMLProcessor
 class ImportService:
     """Servicio principal de importación PLEXOS."""
 
-    def __init__(self, entity_registry: Optional[EntityRegistry] = None):
+    def __init__(
+        self,
+        entity_registry: Optional[EntityRegistry] = None,
+        table_registry: TableRegister = None,
+    ):
         """
         Inicializa servicio de importación.
 
@@ -27,7 +32,8 @@ class ImportService:
             entity_registry: Registry de entities (usa default si None)
         """
         self.entity_registry = entity_registry or EntityRegistry()
-        self.xml_processor = XMLProcessor(self.entity_registry)
+        self.table_registry = table_registry
+        self.xml_processor = XMLProcessor(self.entity_registry, self.table_registry)
 
     def import_plexos_data(
         self,
