@@ -12,3 +12,6 @@ wheels/
 # Otros
 *.log
 *.db
+*.ddb
+*.zip
+*.xml
