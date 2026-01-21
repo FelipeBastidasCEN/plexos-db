@@ -4,14 +4,13 @@ Comandos CLI para PLEXOS-DB con integration con Business Layer.
 """
 
 import json
-import sys
-from typing import Dict, Any
+from typing import Any, Dict
 
-from ..business.services.import_service import ImportService
 from ..business.processors.validators import FileValidator
-from ..model.schemas.schema_registry import SchemaRegistry
-from ..model.common.exceptions import PLEXOSDBError
+from ..business.services.import_service import ImportService
 from ..common.logging_config import get_logger
+from ..model.common.exceptions import PLEXOSDBError
+from ..model.entities.entity_registry import EntityRegistry
 
 
 class BaseCommand:
@@ -68,11 +67,9 @@ class ImportCommand(BaseCommand):
             self._print(f"XML: {self.args.xml_name}")
             self._print(f"Chunk size: {self.args.chunk_size}")
 
-            # Crear servicio de importación
             self.logger.debug("Creando servicio de importación")
             import_service = ImportService()
 
-            # Ejecutar importación
             self.logger.info(
                 f"Ejecutando importación con chunk_size={self.args.chunk_size}"
             )
@@ -84,7 +81,6 @@ class ImportCommand(BaseCommand):
                 overwrite=self.args.overwrite,
             )
 
-            # Mostrar resultados
             self._show_import_results(result)
             self._print_success("Importación completada exitosamente")
             return 0
@@ -134,8 +130,8 @@ class ListTablesCommand(BaseCommand):
         """
         try:
             self.logger.info("Listando tablas soportadas")
-            schema_registry = SchemaRegistry()
-            tables = schema_registry.get_all_table_names()
+            entity_registry = EntityRegistry()
+            tables = entity_registry.get_all_table_names()
 
             self.logger.debug(f"Formato de salida: {self.args.format}")
             if self.args.format == "table":
@@ -203,8 +199,8 @@ class ValidateCommand(BaseCommand):
             FileValidator.validate_xml_name(self.args.xml_name)
 
             # Intentar leer XML básico
-            from zipfile import ZipFile
             from xml.etree.ElementTree import iterparse
+            from zipfile import ZipFile
 
             self.logger.debug("Analizando estructura del ZIP")
             with ZipFile(self.args.input) as zf:
@@ -235,13 +231,13 @@ class ValidateCommand(BaseCommand):
                     self._print(f"Tablas encontradas: {len(table_tags)}")
 
                     # Validar contra tablas conocidas
-                    schema_registry = SchemaRegistry()
-                    known_tables = set(schema_registry.get_all_table_names())
+                    entity_registry = EntityRegistry()
+                    known_tables = set(entity_registry.get_all_table_names())
                     unknown_tables = table_tags - known_tables
 
                     if unknown_tables:
                         self._print(f"⚠️  Tablas desconocidas: {unknown_tables}")
-                        self._print("Considera agregar estas tablas al SchemaRegistry")
+                        self._print("Considera agregar estas tablas al EntityRegistry")
                     else:
                         self._print_success("Estructura XML válida")
                         self._print("Todas las tablas son reconocidas")

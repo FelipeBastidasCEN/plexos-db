@@ -8,9 +8,9 @@ import sys
 from pathlib import Path
 from typing import List, Optional
 
-from .commands import ImportCommand, ListTablesCommand, ValidateCommand
+from ..common.logging_config import get_logger, setup_logging
 from ..model.common.exceptions import PLEXOSDBError
-from ..common.logging_config import setup_logging, get_logger
+from .commands import ImportCommand, ListTablesCommand, ValidateCommand
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -162,7 +162,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     try:
         parser = create_parser()
         args = parser.parse_args(argv)
-        
+
         # Configurar logging basado en argumentos
         log_level = "DEBUG" if args.verbose else "INFO"
         logger = setup_logging(log_level=log_level)
