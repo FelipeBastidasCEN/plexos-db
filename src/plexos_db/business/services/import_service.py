@@ -7,35 +7,35 @@ Coordina XML processor + storage layer con error handling.
 from pathlib import Path
 from typing import Optional
 
+from ...model.common.exceptions import ConfigurationError, DatabaseError
+from ...model.entities.entity_registry import EntityRegistry
+from ...model.storage.bulk_loader import DuckDBBulkLoader
 from ...model.storage.connection import DuckDBConnection
 from ...model.storage.schema_manager import DuckDBSchemaManager
-from ...model.storage.bulk_loader import DuckDBBulkLoader
-from ...model.schemas.schema_registry import SchemaRegistry
-from ..processors.xml_processor import XMLProcessor
 from ..processors.validators import FileValidator
-from ...model.common.exceptions import DatabaseError, ConfigurationError
+from ..processors.xml_processor import XMLProcessor
 
 
 class ImportService:
     """Servicio principal de importación PLEXOS."""
 
-    def __init__(self, schema_registry: Optional[SchemaRegistry] = None):
+    def __init__(self, entity_registry: Optional[EntityRegistry] = None):
         """
         Inicializa servicio de importación.
 
         Args:
-            schema_registry: Registry de schemas (usa default si None)
+            entity_registry: Registry de entities (usa default si None)
         """
-        self.schema_registry = schema_registry or SchemaRegistry()
-        self.xml_processor = XMLProcessor(self.schema_registry)
+        self.entity_registry = entity_registry or EntityRegistry()
+        self.xml_processor = XMLProcessor(self.entity_registry)
 
     def import_plexos_data(
         self,
         zip_path: Path,
         db_path: Path,
-        xml_name: str = "Model PRGdia_Full_Definitivo Solution.xml",
-        chunk_size: int = 100,
-        overwrite: bool = True,
+        xml_name: str,
+        chunk_size: int,
+        overwrite: bool,
     ) -> dict:
         """
         Importa datos PLEXOS desde ZIP a DuckDB.
@@ -55,16 +55,13 @@ class ImportService:
             DatabaseError: Error en operaciones de base de datos
             ConfigurationError: Error en configuración
         """
-        # Validación de inputs
         self._validate_inputs(zip_path, db_path, xml_name, chunk_size)
 
-        # Conexión a base de datos
-        with DuckDBConnection(db_path, read_only=False) as conn:
+        with DuckDBConnection(db_path, overwrite=overwrite, read_only=False) as conn:
             try:
                 # Crear schemas y tablas
-                schema_manager = DuckDBSchemaManager(conn)
-                all_specs = self.schema_registry.get_all_specs()
-                schema_manager.create_all_tables(all_specs)
+                schema_manager = DuckDBSchemaManager(conn, "plexos_solution")
+                schema_manager.create_all_supported_tables()
 
                 # Procesar XML e insertar datos
                 bulk_loader = DuckDBBulkLoader(conn, chunk_size)
@@ -124,7 +121,7 @@ class ImportService:
         Returns:
             Lista de nombres de tablas soportadas
         """
-        return self.schema_registry.get_all_table_names()
+        return self.entity_registry.get_all_table_names()
 
     def is_table_supported(self, table_name: str) -> bool:
         """
@@ -136,4 +133,4 @@ class ImportService:
         Returns:
             True si la tabla es soportada
         """
-        return self.schema_registry.is_supported(table_name)
+        return self.entity_registry.is_supported(table_name)

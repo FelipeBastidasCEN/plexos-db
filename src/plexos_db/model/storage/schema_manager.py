@@ -1,26 +1,31 @@
 """DuckDB schema management.
 
-Creación dinámica de tablas desde TableSpecs para PLEXOS.
+Creación dinámica de tablas desde Entities unificadas para PLEXOS.
 """
 
+from typing import Type
+
 import duckdb
-from ..schemas.base import TableSpec
+
 from ..common.exceptions import DatabaseError
+from ..entities.base_entity import BaseEntity
+from ..entities.entity_registry import EntityRegistry
 
 
 class DuckDBSchemaManager:
-    """Manejador de schemas DuckDB con generación dinámica desde TableSpecs."""
+    """Manejador de schemas DuckDB con generación dinámica desde Entities."""
 
     def __init__(
         self,
         connection: duckdb.DuckDBPyConnection,
-        schema_name: str = "plexos_solution",
+        schema_name: str,
     ):
         """
         Inicializa manager de schemas.
 
         Args:
             connection: Conexión DuckDB activa
+            schema_name: Nombre del schema (default: "plexos")
         """
         self.connection = connection
         self.schema_name = schema_name
@@ -31,100 +36,35 @@ class DuckDBSchemaManager:
         try:
             self.connection.execute(f"CREATE SCHEMA IF NOT EXISTS {self.schema_name};")
         except Exception as e:
-            raise DatabaseError(f"No se puede crear schema plexos: {e}")
+            raise DatabaseError(f"No se puede crear schema {self.schema_name}: {e}")
 
-    def create_table_from_spec(self, spec: TableSpec) -> None:
+    def create_table_from_entity(self, entity_class: Type[BaseEntity]) -> None:
         """
-        Crea tabla DuckDB desde TableSpec.
+        Crea tabla DuckDB desde Entity.
 
         Args:
-            spec: TableSpec con definición de tabla
+            entity_class: Clase Entity con metadata
         """
-        columns_sql = self._generate_columns_sql(spec)
-        table_name = f"plexos.{spec.table_name}"
-
-        sql = f"""
-            CREATE TABLE IF NOT EXISTS {table_name} (
-                {columns_sql}
-            );
-        """
+        table_sql = entity_class.get_table_sql(self.schema_name)
 
         try:
-            self.connection.execute(sql)
+            self.connection.execute(table_sql)
         except Exception as e:
-            raise DatabaseError(f"No se puede crear tabla {spec.table_name}: {e}")
+            raise DatabaseError(f"No se puede crear tabla {entity_class.row_tag}: {e}")
 
-    def create_all_tables(self, specs: dict[str, TableSpec]) -> None:
+    def create_all_tables(self, entities: dict[str, Type[BaseEntity]]) -> None:
         """
-        Crea todas las tablas desde registry de specs.
+        Crea todas las tablas desde registry de entities.
 
         Args:
-            specs: Diccionario de TableSpecs
+            entities: Diccionario de Entity classes
         """
-        for spec in specs.values():
-            self.create_table_from_spec(spec)
+        for entity_class in entities.values():
+            self.create_table_from_entity(entity_class)
 
-    def _generate_columns_sql(self, spec: TableSpec) -> str:
+    def create_all_supported_tables(self) -> None:
         """
-        Genera SQL de columnas desde TableSpec.
-
-        Args:
-            spec: TableSpec con definición
-
-        Returns:
-            String SQL con definición de columnas
+        Crea todas las tablas soportadas usando EntityRegistry.
         """
-
-        # Mapeo de columnas a tipos DuckDB basado en converters
-        column_types = self._get_column_types(spec)
-
-        columns = []
-        for col in spec.columns:
-            col_type = column_types.get(col, "VARCHAR")
-
-            # Manejo especial para columnas con nombres reservados
-            if col.lower() in ["index"]:
-                col_name = f'"{col}"'
-            else:
-                col_name = col
-
-            columns.append(f"{col_name} {col_type}")
-
-        return ",\n        ".join(columns)
-
-    def _get_column_types(self, spec: TableSpec) -> dict[str, str]:
-        """
-        Obtiene tipos DuckDB desde converters de TableSpec.
-
-        Args:
-            spec: TableSpec con converters
-
-        Returns:
-            Diccionario {column_name: duckdb_type}
-        """
-        from ..common.converters import to_int0, to_int_opt, to_bool, clean_uuid
-
-        type_mapping = {
-            # Integers
-            to_int0: "INTEGER",
-            to_int_opt: "INTEGER",
-            # Booleans
-            to_bool: "BOOLEAN",
-            # UUIDs
-            clean_uuid: "UUID",
-            # Strings default
-            lambda s: (s or "").strip().lower()
-            in {"true", "1", "yes", "y", "t"}: "BOOLEAN",
-        }
-
-        column_types = {}
-        for col, converter in spec.converters.items():
-            duckdb_type = type_mapping.get(converter, "VARCHAR")
-
-            # Handle nullable types
-            if converter in [to_int_opt, clean_uuid]:
-                duckdb_type += " DEFAULT NULL"
-
-            column_types[col] = duckdb_type
-
-        return column_types
+        entities = EntityRegistry.get_all_entities()
+        self.create_all_tables(entities)

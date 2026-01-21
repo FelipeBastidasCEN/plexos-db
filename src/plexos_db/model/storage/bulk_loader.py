@@ -3,9 +3,12 @@
 Inserción masiva por chunks para performance con archivos grandes.
 """
 
-import duckdb
 from typing import Iterator, Tuple
+
+import duckdb
+
 from ..common.exceptions import DatabaseError
+from ..entities.entity_registry import EntityRegistry
 
 
 class DuckDBBulkLoader:
@@ -35,7 +38,6 @@ class DuckDBBulkLoader:
         self.connection.execute("BEGIN;")
         try:
             for table_name, row_tuple in row_iter:
-                print(table_name, row_tuple)
                 if table_name not in self._buffers:
                     self._prepare_table(table_name)
 
@@ -61,24 +63,30 @@ class DuckDBBulkLoader:
         Args:
             table_name: Nombre de la tabla
         """
+        # Obtener entity class desde registry
+        entity_class = EntityRegistry.get_entity_class(table_name)
+        columns = entity_class.get_columns()
+
         # Generar INSERT SQL dinámicamente
-        # Necesitamos saber las columnas desde el registry
-        from ..schemas.schema_registry import SchemaRegistry
+        placeholders = ", ".join(["?"] * len(columns))
 
-        spec = SchemaRegistry.get_spec(table_name)
+        # Handle reserved keywords en column names
+        formatted_columns = []
+        for col in columns:
+            if col.lower() in ("index", "show"):
+                formatted_columns.append(f'"{col}"')
+            else:
+                formatted_columns.append(col)
 
-        placeholders = ", ".join(["?"] * len(spec.columns))
+        table_db_name = table_name  # Remover 't_' prefix para DB
         sql = f"""
-            INSERT INTO plexos.{spec.table_name}
-            ({
-            ", ".join(
-                [f'"{col}"' if col.lower() == "index" else col for col in spec.columns]
-            )
-        })
+            INSERT INTO plexos.{table_db_name}
+            ({", ".join(formatted_columns)})
             VALUES ({placeholders})
         """
 
-        self._prepared_statements[table_name] = self.connection.prepare(sql)
+        # Usar execute con parameters en lugar de prepare (DuckDB no tiene prepare)
+        self._prepared_statements[table_name] = sql
         self._buffers[table_name] = []
 
     def _flush_table(self, table_name: str) -> None:
@@ -92,8 +100,8 @@ class DuckDBBulkLoader:
         if not buffer:
             return
 
-        statement = self._prepared_statements[table_name]
-        statement.executemany(buffer)
+        sql = self._prepared_statements[table_name]
+        self.connection.executemany(sql, buffer)
         buffer.clear()
 
     def get_stats(self) -> dict[str, int]:

@@ -4,8 +4,9 @@ Entity con metadata integrada que reemplaza TableSpec + dataclass separados.
 """
 
 from dataclasses import dataclass
-from typing import Optional, ClassVar
-from .base_entity import BaseEntity, IntegerField, StringField, BooleanField
+from typing import ClassVar, Optional
+
+from .base_entity import BaseEntity, BooleanField, IntegerField, StringField
 
 
 @dataclass(frozen=True, slots=True)

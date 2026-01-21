@@ -5,27 +5,29 @@ Arquitectura optimizada para 100MB XML.
 """
 
 from pathlib import Path
-from typing import Iterator, Tuple
-from zipfile import ZipFile
+from typing import Iterator, Tuple, Union
 from xml.etree.ElementTree import iterparse
+from zipfile import ZipFile
 
-from ...model.common.xml_utils import strip_namespace, extract_children_text
-from ...model.schemas.schema_registry import SchemaRegistry
-from ...model.common.exceptions import MissingColumnError
 from ...common.logging_config import get_logger
+from ...model.common.exceptions import MissingColumnError
+from ...model.common.xml_utils import extract_children_text, strip_namespace
+from ...model.entities.entity_registry import EntityRegistry
+from ...model.entities.table_register import TableRegister
 
 
 class XMLProcessor:
     """Streaming XML processor optimizado para archivos grandes."""
 
-    def __init__(self, schema_registry: SchemaRegistry):
+    def __init__(self, entity_registry: EntityRegistry, table_registry: TableRegister):
         """
-        Inicializa processor con registry de schemas.
+        Inicializa processor con registry de entities.
 
         Args:
-            schema_registry: Registry de TableSpecs validado
+            entity_registry: Registry de Entities validado (usa default si None)
         """
-        self.schema_registry = schema_registry
+        self.entity_registry = entity_registry
+        self.table_registry = table_registry
         self._stats = ProcessingStats()
         self.logger = get_logger("business.processors")
 
@@ -42,32 +44,45 @@ class XMLProcessor:
         Yields:
             Tuplas de (table_name, row_tuple)
         """
-        self.logger.info(f"Iniciando streaming de ZIP: {zip_path.name}, XML: {xml_name}")
-        specs = self.schema_registry.get_all_specs()
+        self.logger.info(
+            f"Iniciando streaming de ZIP: {zip_path.name}, XML: {xml_name}"
+        )
 
         with ZipFile(zip_path) as zf:
             with zf.open(xml_name, "r") as f:
+                table_name: str = ""
                 for _, elem in iterparse(f, events=("end",)):
                     tag = strip_namespace(elem.tag)
 
                     # Comportamiento 1: Ignorar tablas desconocidas con warning
-                    if tag not in specs:
-                        self.logger.warning(f"Ignorando tabla desconocida: {tag}")
+                    if not self.entity_registry.is_supported(tag):
+                        # Solo arma log cuanto se ve una tabla (todas parte por t_).
+                        # En caso de ser una columna se ignora para log
+                        if tag[0:2] == "t_":
+                            if tag == table_name:
+                                continue
+                            else:
+                                table_name = tag
+                            self.logger.warning(f"Ignorando tabla desconocida: {tag}")
                         continue
 
-                    spec = specs[tag]
                     self.logger.debug(f"Procesando elemento: {tag}")
 
                     try:
                         # Extracción ultra-rápida de datos
                         row_data = extract_children_text(elem)
-                        self.logger.debug(f"Extraídos {len(row_data)} campos para {tag}")
+                        self.logger.debug(
+                            f"Extraídos {len(row_data)} campos para {tag}"
+                        )
 
                         # Validación de columnas requeridas
-                        # spec.validate_row_data(row_data)
+                        self.entity_registry.validate_row_data(tag, row_data)
 
-                        # Conversión a tupla usando TableSpec
-                        row_tuple = spec.convert_row(row_data)
+                        # Conversión a Entity y luego a tupla
+                        entity = self.entity_registry.create_entity_from_dict(
+                            tag, row_data
+                        )
+                        row_tuple = entity.to_tuple()
 
                         yield tag, row_tuple
                         self._stats.processed_row(tag)
