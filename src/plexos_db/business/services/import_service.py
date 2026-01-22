@@ -21,9 +21,7 @@ class ImportService:
     """Servicio principal de importación PLEXOS."""
 
     def __init__(
-        self,
-        entity_registry: Optional[EntityRegistry] = None,
-        table_registry: TableRegister = None,
+        self
     ):
         """
         Inicializa servicio de importación.
@@ -31,9 +29,8 @@ class ImportService:
         Args:
             entity_registry: Registry de entities (usa default si None)
         """
-        self.entity_registry = entity_registry or EntityRegistry()
-        self.table_registry = table_registry
-        self.xml_processor = XMLProcessor(self.entity_registry, self.table_registry)
+        self.table_registry = TableRegister("plexos_solution")
+        self.xml_processor = XMLProcessor(self.table_registry)
 
     def import_plexos_data(
         self,
