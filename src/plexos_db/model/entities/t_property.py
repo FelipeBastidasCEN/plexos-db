@@ -12,7 +12,7 @@ from .base_entity import BaseEntity, BooleanField, IntegerField, StringField
 @dataclass(frozen=True, slots=True)
 class TProperty(BaseEntity):
     """Entity para tabla t_property de PLEXOS con metadata integrada."""
-    
+
     # --- Campos de datos (tipos para IDE/mypy) ---
     property_id: int
     collection_id: int
@@ -25,10 +25,10 @@ class TProperty(BaseEntity):
     is_period: bool
     is_summary: bool
     lang_id: int
-    
+
     # --- Metadata ClassVars ---
     row_tag: ClassVar[str] = "t_property"
-    
+
     # ClassVar para fields metadata (requerido por BaseEntity)
     fields: ClassVar[dict] = {
         "property_id": IntegerField(required=True),
@@ -43,28 +43,28 @@ class TProperty(BaseEntity):
         "is_summary": BooleanField(required=True),
         "lang_id": IntegerField(required=True),
     }
-    
+
     # --- Métodos específicos de TProperty ---
-    
+
     def __str__(self) -> str:
         """Representación legible."""
         return f"TProperty(id={self.property_id}, name='{self.name}', collection_id={self.collection_id})"
-    
+
     @property
     def has_enum(self) -> bool:
         """Verifica si la propiedad tiene enumeración."""
         return self.enum_id is not None
-    
+
     @property
     def is_time_varying(self) -> bool:
         """Verifica si la propiedad varía en tiempo."""
         return self.is_period
-    
-    @property 
+
+    @property
     def is_aggregable(self) -> bool:
         """Verifica si la propiedad es agregable."""
         return self.is_summary
-    
+
     def get_full_identifier(self) -> str:
         """Retorna identificador completo."""
         if self.has_enum:

@@ -13,8 +13,10 @@ from ...common.logging_config import get_logger
 from ...model.common.exceptions import MissingColumnError
 from ...model.entities.table_register import TableRegister
 
+
 def strip_namespace(tag: str) -> str:
     return tag.split("}", 1)[-1]
+
 
 class XMLProcessor:
     """Streaming XML processor optimizado para archivos grandes."""
@@ -59,7 +61,7 @@ class XMLProcessor:
                         table = self.table_registry.get_table(tag)
                         row = table.from_element(elem)
 
-                        yield row 
+                        yield row
                         self._stats.processed_row(tag)
 
                     except MissingColumnError as e:

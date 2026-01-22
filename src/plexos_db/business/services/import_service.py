@@ -5,10 +5,8 @@ Coordina XML processor + storage layer con error handling.
 """
 
 from pathlib import Path
-from typing import Optional
 
 from ...model.common.exceptions import ConfigurationError, DatabaseError
-from ...model.entities.entity_registry import EntityRegistry
 from ...model.entities.table_register import TableRegister
 from ...model.storage.bulk_loader import DuckDBBulkLoader
 from ...model.storage.connection import DuckDBConnection
@@ -20,9 +18,7 @@ from ..processors.xml_processor import XMLProcessor
 class ImportService:
     """Servicio principal de importación PLEXOS."""
 
-    def __init__(
-        self
-    ):
+    def __init__(self):
         """
         Inicializa servicio de importación.
 

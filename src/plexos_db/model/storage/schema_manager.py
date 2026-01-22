@@ -9,7 +9,7 @@ import duckdb
 
 from ..common.exceptions import DatabaseError
 from ..entities.base_entity import BaseEntity
-from ..entities.entity_registry import EntityRegistry
+from ..entities.table_register import TableRegister
 
 
 class DuckDBSchemaManager:
@@ -19,6 +19,7 @@ class DuckDBSchemaManager:
         self,
         connection: duckdb.DuckDBPyConnection,
         schema_name: str,
+        table_registry: TableRegister
     ):
         """
         Inicializa manager de schemas.
@@ -29,6 +30,7 @@ class DuckDBSchemaManager:
         """
         self.connection = connection
         self.schema_name = schema_name
+        self.table_registry = table_registry
         self._create_plexos_schema()
 
     def _create_plexos_schema(self) -> None:
@@ -67,4 +69,5 @@ class DuckDBSchemaManager:
         Crea todas las tablas soportadas usando EntityRegistry.
         """
         entities = EntityRegistry.get_all_entities()
+        tables = self.table_registry.SUPPORTED_TABLES
         self.create_all_tables(entities)
