@@ -16,10 +16,7 @@ class DuckDBSchemaManager:
     """Manejador de schemas DuckDB con generación dinámica desde Entities."""
 
     def __init__(
-        self,
-        connection: duckdb.DuckDBPyConnection,
-        schema_name: str,
-        table_registry: TableRegister
+        self, connection: duckdb.DuckDBPyConnection, table_registry: TableRegister
     ):
         """
         Inicializa manager de schemas.
@@ -29,16 +26,18 @@ class DuckDBSchemaManager:
             schema_name: Nombre del schema (default: "plexos")
         """
         self.connection = connection
-        self.schema_name = schema_name
         self.table_registry = table_registry
-        self._create_plexos_schema()
 
     def _create_plexos_schema(self) -> None:
         """Crea schema plexos si no existe."""
         try:
-            self.connection.execute(f"CREATE SCHEMA IF NOT EXISTS {self.schema_name};")
+            self.connection.execute(
+                f"CREATE SCHEMA IF NOT EXISTS {self.table_registry.schema_name};"
+            )
         except Exception as e:
-            raise DatabaseError(f"No se puede crear schema {self.schema_name}: {e}")
+            raise DatabaseError(
+                f"No se puede crear schema {self.table_registry.schema_name}: {e}"
+            )
 
     def create_table_from_entity(self, entity_class: Type[BaseEntity]) -> None:
         """
@@ -69,5 +68,6 @@ class DuckDBSchemaManager:
         Crea todas las tablas soportadas usando EntityRegistry.
         """
         entities = EntityRegistry.get_all_entities()
+        self._create_plexos_schema()
         tables = self.table_registry.SUPPORTED_TABLES
         self.create_all_tables(entities)

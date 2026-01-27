@@ -25,7 +25,7 @@ class ImportService:
         Args:
             entity_registry: Registry de entities (usa default si None)
         """
-        self.table_registry = TableRegister("plexos_solution")
+        self.table_registry = TableRegister(schema_name="plexos_solution")
         self.xml_processor = XMLProcessor(self.table_registry)
 
     def import_plexos_data(
@@ -59,7 +59,10 @@ class ImportService:
         with DuckDBConnection(db_path, overwrite=overwrite, read_only=False) as conn:
             try:
                 # Crear schemas y tablas
-                schema_manager = DuckDBSchemaManager(conn, "plexos_solution")
+                schema_manager = DuckDBSchemaManager(
+                    connection=conn,
+                    table_registry=self.table_registry,
+                )
                 schema_manager.create_all_supported_tables()
 
                 # Procesar XML e insertar datos
